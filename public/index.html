@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tiffin Order Creator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #e85d04;
+      --primary-dark: #c44d03;
+      --primary-light: #fff3ed;
+      --bg: #f7f7f7;
+      --card: #ffffff;
+      --border: #e2e2e2;
+      --text: #1a1a1a;
+      --muted: #6b7280;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --radius: 10px;
+      --shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--primary);
+      color: #fff;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 2px 8px rgba(232,93,4,0.3);
+    }
+    header img { width: 36px; height: 36px; border-radius: 8px; object-fit: cover; }
+    header h1 { font-size: 1.15rem; font-weight: 700; letter-spacing: 0.01em; }
+    header span { font-size: 0.8rem; opacity: 0.85; margin-left: auto; }
+
+    .url-bar {
+      background: #fff8f5;
+      border-bottom: 1px solid #fcd9c4;
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .url-bar label { font-size: 0.8rem; font-weight: 600; color: var(--primary); white-space: nowrap; }
+    .url-bar input {
+      flex: 1;
+      border: 1.5px solid #fcd9c4;
+      border-radius: 6px;
+      padding: 7px 12px;
+      font-size: 0.85rem;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .url-bar input:focus { border-color: var(--primary); }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 0;
+      height: calc(100vh - 97px);
+      overflow: hidden;
+    }
+
+    /* LEFT PANEL */
+    .left-panel {
+      background: var(--card);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .section-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 2px;
+    }
+
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-group label { font-size: 0.78rem; font-weight: 600; color: var(--muted); }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      border: 1.5px solid var(--border);
+      border-radius: 7px;
+      padding: 8px 10px;
+      font-size: 0.85rem;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s;
+      background: #fff;
+      width: 100%;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus { border-color: var(--primary); }
+    .form-group textarea { resize: vertical; min-height: 56px; }
+
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    .divider { border: none; border-top: 1px solid var(--border); }
+
+    /* RIGHT PANEL */
+    .right-panel {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      overflow: hidden;
+    }
+
+    .menu-area {
+      overflow-y: auto;
+      padding: 16px;
+      background: var(--bg);
+    }
+
+    /* Category tabs */
+    .cat-tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .cat-tab {
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1.5px solid var(--border);
+      background: #fff;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      color: var(--muted);
+    }
+    .cat-tab:hover { border-color: var(--primary); color: var(--primary); }
+    .cat-tab.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+    /* Food grid */
+    .food-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 10px;
+    }
+
+    .food-card {
+      background: #fff;
+      border-radius: var(--radius);
+      border: 1.5px solid var(--border);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.15s;
+      cursor: pointer;
+    }
+    .food-card:hover { border-color: var(--primary); box-shadow: 0 2px 8px rgba(232,93,4,0.12); }
+    .food-card.in-cart { border-color: var(--primary); background: var(--primary-light); }
+
+    .food-card-img {
+      width: 100%;
+      height: 100px;
+      object-fit: cover;
+      background: #f3f3f3;
+    }
+    .food-card-img-placeholder {
+      width: 100%;
+      height: 100px;
+      background: linear-gradient(135deg, #fde8d8, #ffd0b5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+    }
+
+    .food-card-body {
+      padding: 8px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .food-card-name {
+      font-size: 0.78rem;
+      font-weight: 600;
+      line-height: 1.3;
+      color: var(--text);
+    }
+    .food-card-desc {
+      font-size: 0.7rem;
+      color: var(--muted);
+      line-height: 1.3;
+    }
+    .food-card-price {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-top: auto;
+    }
+
+    .food-card-actions {
+      padding: 6px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border-top: 1px solid var(--border);
+    }
+    .qty-btn {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: none;
+      background: var(--primary);
+      color: #fff;
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      transition: background 0.15s;
+    }
+    .qty-btn:hover { background: var(--primary-dark); }
+    .qty-btn.minus { background: #e5e7eb; color: #374151; }
+    .qty-btn.minus:hover { background: #d1d5db; }
+    .qty-display {
+      font-size: 0.9rem;
+      font-weight: 700;
+      min-width: 20px;
+      text-align: center;
+    }
+
+    /* BOTTOM SUMMARY */
+    .summary-panel {
+      background: #fff;
+      border-top: 1.5px solid var(--border);
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .summary-items {
+      max-height: 160px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .summary-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      padding: 3px 0;
+    }
+    .summary-item-name { color: var(--text); font-weight: 500; flex: 1; padding-right: 8px; }
+    .summary-item-qty { color: var(--muted); white-space: nowrap; margin-right: 8px; }
+    .summary-item-price { font-weight: 600; white-space: nowrap; }
+
+    .summary-totals {
+      border-top: 1px solid var(--border);
+      padding-top: 8px;
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+    .totals-grid { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+    }
+    .total-row.grand {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-top: 2px;
+    }
+
+    .submit-btn {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .submit-btn:hover { background: var(--primary-dark); }
+    .submit-btn:disabled { background: #d1d5db; cursor: not-allowed; }
+
+    /* Toast */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 12px 18px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #fff;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: all 0.25s;
+      z-index: 1000;
+      max-width: 340px;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+    #toast.success { background: var(--success); }
+    #toast.error { background: var(--danger); }
+
+    /* Response modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 900;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: #fff;
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 560px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .modal-title { font-size: 1rem; font-weight: 700; }
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.3rem;
+      cursor: pointer;
+      color: var(--muted);
+      line-height: 1;
+    }
+    pre {
+      background: #1e1e2e;
+      color: #cdd6f4;
+      border-radius: 8px;
+      padding: 14px;
+      font-size: 0.78rem;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .empty-cart {
+      color: var(--muted);
+      font-size: 0.82rem;
+      text-align: center;
+      padding: 8px 0;
+    }
+
+    .badge {
+      display: inline-block;
+      background: var(--primary);
+      color: #fff;
+      border-radius: 10px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 1px 6px;
+      margin-left: 4px;
+    }
+
+    .popular-tag {
+      font-size: 0.65rem;
+      background: #fef3c7;
+      color: #92400e;
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-weight: 600;
+    }
+
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+  </style>
+</head>
+<body>
+
+<header>
+  <img src="https://s3.brilliant.com.bd/production/uploads/1775799297852-852604956-TiffinLOgo-01-01.jpg" alt="Tiffin" onerror="this.style.display='none'" />
+  <h1>Tiffin Order Creator</h1>
+  <span>Test Order Tool</span>
+</header>
+
+<div class="url-bar">
+  <label>Target URL</label>
+  <input type="url" id="targetUrl" value="http://127.0.0.1:3001/api/v1/ingest/website" placeholder="http://127.0.0.1:3001/api/v1/ingest/website" />
+</div>
+
+<div style="background: #fffbe6; border-bottom: 1px solid #ffe58f; padding: 8px 24px; font-size: 0.75rem; color: #856404; display: flex; gap: 16px; align-items: center;">
+  <span><strong>Test Config:</strong> X-Tiffin-Secret: tiffinbd-dev-website-secret</span>
+  <span style="margin-left: auto;">Start stack: <code>make local-d</code> from <code>tiffinbd-infra/</code></span>
+</div>
+
+<div class="layout">
+  <!-- LEFT: Order Form -->
+  <div class="left-panel">
+    <div>
+      <div class="section-title">Order Details</div>
+    </div>
+
+    <div class="form-group">
+      <label>Branch</label>
+      <select id="branchId"></select>
+    </div>
+
+    <div class="row-2">
+      <div class="form-group">
+        <label>Order Type</label>
+        <select id="orderType">
+          <option value="DELIVERY">DELIVERY</option>
+          <option value="DINE_IN">DINE IN</option>
+          <option value="TAKEAWAY">TAKEAWAY</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Payment</label>
+        <select id="paymentType">
+          <option value="CASH">CASH</option>
+          <option value="CARD">CARD</option>
+          <option value="ONLINE">ONLINE</option>
+          <option value="BKash">BKash</option>
+          <option value="NAGAD">NAGAD</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Source</label>
+      <select id="source">
+        <option value="LINK">LINK</option>
+        <option value="APP">APP</option>
+        <option value="WEB">WEB</option>
+        <option value="POS">POS</option>
+      </select>
+    </div>
+
+    <hr class="divider" />
+    <div class="section-title">Customer Info</div>
+
+    <div class="form-group">
+      <label>Customer Name</label>
+      <input type="text" id="customerName" placeholder="Test - [Do not send]" value="Test - [Do not send]" />
+    </div>
+
+    <div class="form-group">
+      <label>Phone</label>
+      <input type="text" id="customerPhone" placeholder="01777777777777" value="01777777777777" />
+    </div>
+
+    <div class="form-group">
+      <label>Address</label>
+      <input type="text" id="customerAddress" placeholder="Test Order" value="Test Order" />
+    </div>
+
+    <div class="row-2">
+      <div class="form-group">
+        <label>Latitude</label>
+        <input type="number" id="customerAddressLat" step="any" value="82.8628" />
+      </div>
+      <div class="form-group">
+        <label>Longitude</label>
+        <input type="number" id="customerAddressLng" step="any" value="135" />
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Note</label>
+      <textarea id="note" placeholder="Order note..."></textarea>
+    </div>
+
+    <div class="form-group">
+      <label>OTP Token</label>
+      <input type="text" id="otpToken" placeholder="null (leave blank for null)" />
+    </div>
+  </div>
+
+  <!-- RIGHT: Menu + Summary -->
+  <div class="right-panel">
+    <div class="menu-area">
+      <div class="cat-tabs" id="catTabs"></div>
+      <div class="food-grid" id="foodGrid"></div>
+    </div>
+
+    <div class="summary-panel">
+      <div class="summary-items" id="summaryItems">
+        <div class="empty-cart">No items selected. Pick items from the menu above.</div>
+      </div>
+      <div class="summary-totals">
+        <div class="totals-grid">
+          <div class="total-row">
+            <span>Subtotal</span>
+            <span id="subTotalDisplay">TK 0</span>
+          </div>
+          <div class="total-row">
+            <span>VAT (5% on non-inclusive)</span>
+            <span id="vatDisplay">TK 0</span>
+          </div>
+          <div class="total-row grand">
+            <span>Total</span>
+            <span id="totalDisplay">TK 0</span>
+          </div>
+        </div>
+        <button class="submit-btn" id="submitBtn" onclick="submitOrder()">
+          <span>Place Order</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Response Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Response</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  let allItems = [];
+  let categories = [];
+  let branches = [];
+  let cart = {}; // itemId -> quantity
+  let activeCategory = 'all';
+  let companyId = '';
+
+  const VAT_RATE = 0.05;
+
+  async function init() {
+    try {
+      const res = await fetch('/api/branches');
+      const data = await res.json();
+      const d = data.data;
+
+      companyId = d.company._id;
+      allItems = d.foodItems;
+      categories = d.foodCategories;
+      branches = d.branches;
+
+      renderBranches();
+      renderCategoryTabs();
+      renderMenu('all');
+    } catch (e) {
+      showToast('Failed to load menu data: ' + e.message, 'error');
+    }
+  }
+
+  function renderBranches() {
+    const sel = document.getElementById('branchId');
+    sel.innerHTML = branches.map(b =>
+      `<option value="${b._id}">${b.name}</option>`
+    ).join('');
+  }
+
+  function renderCategoryTabs() {
+    const container = document.getElementById('catTabs');
+    const allTab = `<button class="cat-tab active" data-cat="all" onclick="filterCat('all', this)">All Items <span class="badge">${allItems.length}</span></button>`;
+    const catTabs = categories.map(c => {
+      const count = allItems.filter(i => i.foodCategoryId === c._id).length;
+      return `<button class="cat-tab" data-cat="${c._id}" onclick="filterCat('${c._id}', this)">${c.name.replace('Tiffin: ', '')} <span class="badge">${count}</span></button>`;
+    }).join('');
+    container.innerHTML = allTab + catTabs;
+  }
+
+  function filterCat(catId, btn) {
+    activeCategory = catId;
+    document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    renderMenu(catId);
+  }
+
+  function renderMenu(catId) {
+    const items = catId === 'all' ? allItems : allItems.filter(i => i.foodCategoryId === catId);
+    const grid = document.getElementById('foodGrid');
+
+    grid.innerHTML = items.map(item => {
+      const qty = cart[item._id] || 0;
+      const img = item.images && item.images[0]
+        ? `<img class="food-card-img" src="${item.images[0]}" alt="${item.name}" loading="lazy" />`
+        : `<div class="food-card-img-placeholder">🍽️</div>`;
+
+      return `
+        <div class="food-card ${qty > 0 ? 'in-cart' : ''}" id="card-${item._id}">
+          ${img}
+          <div class="food-card-body">
+            <div class="food-card-name">${item.name} ${item.isPopular ? '<span class="popular-tag">Popular</span>' : ''}</div>
+            ${item.desc ? `<div class="food-card-desc">${item.desc}</div>` : ''}
+            <div class="food-card-price">TK ${item.price}</div>
+          </div>
+          <div class="food-card-actions">
+            ${qty > 0 ? `
+              <button class="qty-btn minus" onclick="changeQty('${item._id}', -1)">−</button>
+              <span class="qty-display">${qty}</span>
+              <button class="qty-btn" onclick="changeQty('${item._id}', 1)">+</button>
+            ` : `
+              <button class="qty-btn" style="width:auto;border-radius:6px;padding:4px 14px;font-size:0.78rem;" onclick="changeQty('${item._id}', 1)">Add</button>
+            `}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function changeQty(itemId, delta) {
+    const current = cart[itemId] || 0;
+    const next = current + delta;
+    if (next <= 0) {
+      delete cart[itemId];
+    } else {
+      cart[itemId] = next;
+    }
+    renderMenu(activeCategory);
+    renderSummary();
+  }
+
+  function renderSummary() {
+    const container = document.getElementById('summaryItems');
+    const cartEntries = Object.entries(cart);
+
+    if (cartEntries.length === 0) {
+      container.innerHTML = '<div class="empty-cart">No items selected. Pick items from the menu above.</div>';
+      document.getElementById('subTotalDisplay').textContent = 'TK 0';
+      document.getElementById('vatDisplay').textContent = 'TK 0';
+      document.getElementById('totalDisplay').textContent = 'TK 0';
+      return;
+    }
+
+    let subTotal = 0;
+    let vatAmount = 0;
+
+    const rows = cartEntries.map(([itemId, qty]) => {
+      const item = allItems.find(i => i._id === itemId);
+      if (!item) return '';
+      const lineTotal = item.price * qty;
+      subTotal += lineTotal;
+      if (!item.vatInclusive) vatAmount += lineTotal * VAT_RATE;
+      return `
+        <div class="summary-item">
+          <span class="summary-item-name">${item.name}</span>
+          <span class="summary-item-qty">x${qty}</span>
+          <span class="summary-item-price">TK ${lineTotal}</span>
+        </div>`;
+    }).join('');
+
+    container.innerHTML = rows;
+
+    const total = subTotal + vatAmount;
+    document.getElementById('subTotalDisplay').textContent = `TK ${subTotal}`;
+    document.getElementById('vatDisplay').textContent = `TK ${vatAmount.toFixed(2)}`;
+    document.getElementById('totalDisplay').textContent = `TK ${parseFloat(total.toFixed(2))}`;
+  }
+
+  function buildPayload() {
+    const cartEntries = Object.entries(cart);
+    let subTotal = 0;
+    let vatAmount = 0;
+
+    const orderItems = cartEntries.map(([itemId, qty]) => {
+      const item = allItems.find(i => i._id === itemId);
+      const lineTotal = item.price * qty;
+      subTotal += lineTotal;
+      if (!item.vatInclusive) vatAmount += lineTotal * VAT_RATE;
+      return { itemId, quantity: qty, selections: [], note: '' };
+    });
+
+    const total = parseFloat((subTotal + vatAmount).toFixed(2));
+    const otpRaw = document.getElementById('otpToken').value.trim();
+
+    return {
+      source: document.getElementById('source').value,
+      paymentType: document.getElementById('paymentType').value,
+      companyId,
+      branchId: document.getElementById('branchId').value,
+      orderType: document.getElementById('orderType').value,
+      customerName: document.getElementById('customerName').value,
+      customerPhone: document.getElementById('customerPhone').value,
+      customerAddress: document.getElementById('customerAddress').value,
+      customerAddressLat: parseFloat(document.getElementById('customerAddressLat').value) || 0,
+      customerAddressLng: parseFloat(document.getElementById('customerAddressLng').value) || 0,
+      note: document.getElementById('note').value,
+      otpToken: otpRaw === '' ? null : otpRaw,
+      orderItems,
+      subTotal,
+      total,
+    };
+  }
+
+  async function submitOrder() {
+    const url = document.getElementById('targetUrl').value.trim();
+    if (!url) { showToast('Please enter a target URL first.', 'error'); return; }
+    if (Object.keys(cart).length === 0) { showToast('Add at least one item to the order.', 'error'); return; }
+
+    const payload = buildPayload();
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span>Sending...</span>';
+
+    try {
+      const res = await fetch('/proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: url,
+          headers: { 'X-Tiffin-Secret': 'tiffinbd-dev-website-secret' },
+          body: payload
+        }),
+      });
+
+      const text = await res.text();
+      let pretty;
+      try { pretty = JSON.stringify(JSON.parse(text), null, 2); }
+      catch { pretty = text; }
+
+      const status = res.status;
+      if (res.ok) {
+        showToast(`Order placed! (${status})`, 'success');
+        openModal(`Response — ${status} ${res.statusText}`, pretty, true);
+      } else {
+        showToast(`Request failed (${status})`, 'error');
+        openModal(`Error — ${status} ${res.statusText}`, pretty, false);
+      }
+    } catch (err) {
+      showToast('Network error: ' + err.message, 'error');
+      openModal('Network Error', err.message, false);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<span>Place Order</span>';
+    }
+  }
+
+  function openModal(title, body, success) {
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalTitle').style.color = success ? 'var(--success)' : 'var(--danger)';
+
+    // Show payload + response
+    const payloadStr = JSON.stringify(buildPayload(), null, 2);
+    document.getElementById('modalBody').innerHTML = `
+      <p style="font-size:0.8rem;color:var(--muted);margin-bottom:6px;font-weight:600;">Payload Sent</p>
+      <pre>${escapeHtml(payloadStr)}</pre>
+      <p style="font-size:0.8rem;color:var(--muted);margin:10px 0 6px;font-weight:600;">Server Response</p>
+      <pre>${escapeHtml(body)}</pre>
+    `;
+    document.getElementById('modalOverlay').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('modalOverlay').classList.remove('open');
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function showToast(msg, type) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `show ${type}`;
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.className = ''; }, 3500);
+  }
+
+  // Close modal on overlay click
+  document.getElementById('modalOverlay').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+
+  init();
+</script>
+</body>
+</html>
